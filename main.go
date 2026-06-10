@@ -3,11 +3,10 @@ package main
 import (
 	"bufio"
 	"fmt"
-	"io"
+	"httProtocol/parser"
+	"httProtocol/router"
 	"log"
 	"net"
-	"strconv"
-	"strings"
 )
 
 func main() {
@@ -27,10 +26,11 @@ func main() {
 
 func read(conn net.Conn) {
 	dataReader := bufio.NewReader(conn)
+	var startLineData *parser.StartLine
 	var isStartLineParsed bool
-	var headerMap *map[string]string
+	var headerMap parser.HeaderData
 	var headerDone bool
-	// var messageParsed bool
+
 	header := make(map[string]string)
 	for {
 		data, err := dataReader.ReadString('\n')
@@ -42,105 +42,23 @@ func read(conn net.Conn) {
 		}
 		if !isStartLineParsed {
 			isStartLineParsed = true
-			response, statusCode := handleStartLine(data)
-			if statusCode != 200 {
-				conn.Write([]byte(response))
-				conn.Close()
+			startLineData, err = parser.ParseStartLine(data)
+			if err != nil {
+				fmt.Println(err)
 				return
 			}
+			fmt.Println("The start line data in struct is:", startLineData)
 		} else if !headerDone {
 			if data == "\r\n" {
 				headerDone = true
-				messageParsing(dataReader, headerMap)
+				messageBody := parser.ParseBody(dataReader, headerMap)
+				fmt.Println("Getting the Start line data:", startLineData)
+				fmt.Println("Getting the header:", headerMap)
+				fmt.Println("The message body is:", messageBody)
+				router.Route(startLineData, headerMap, messageBody)
 			} else {
-				headerMap = handleHeader(data, &header)
+				headerMap = parser.ParseHeader(data, &header)
 			}
 		}
-	}
-}
-
-// bool is whether the line is parsed. String is the response and int is the status code
-func handleStartLine(data string) (string, int) {
-	allowedMethods := map[string]bool{
-		"GET":    true,
-		"POST":   true,
-		"PUT":    true,
-		"PATCH":  true,
-		"DELETE": true,
-	}
-
-	allowedPaths := map[string]bool{
-		"/home":     true,
-		"/test":     true,
-		"/willWork": true,
-	}
-	var parsedString []string
-	var responseString string
-	var code int
-
-	parsedString = strings.Split(data, " ")
-
-	if len(parsedString) != 3 {
-		responseString = "HTTP/1.1 400 Bad Request\r\n\r\n"
-		code = 400
-		return responseString, code
-	}
-
-	if _, ok := allowedMethods[parsedString[0]]; !ok {
-		log.Println("Invalid Method:", parsedString[2])
-		responseString = "HTTP/1.1 501 Unsupported \r\n\r\n"
-		code = 501
-	} else if _, ok := allowedPaths[parsedString[1]]; !ok {
-		log.Println("Wrong PATH:", parsedString[1])
-		responseString = "HTTP/1.1 404 Not Found\r\n\r\n"
-		code = 404
-	} else if strings.TrimSuffix(parsedString[2], "\r\n") != "HTTP/1.1" {
-		log.Println("Wrong VERSION:", parsedString[2])
-		responseString = "HTTP/1.1 505 Unsupported Version\r\n\r\n"
-		code = 505
-	} else {
-		responseString = "HTTP/1.1 200 OK\r\n\r\n"
-		code = 200
-	}
-	return responseString, code
-}
-
-func handleHeader(data string, header *map[string]string) *map[string]string {
-	var parsedHeader []string
-	parsedHeader = strings.Split(data, ":")
-
-	for data != "\r\n" {
-		if len(parsedHeader) == 1 {
-			break
-		} else {
-			(*header)[parsedHeader[0]] = strings.TrimSuffix(parsedHeader[1], "\r\n")
-			break
-		}
-	}
-	return header
-}
-
-func messageParsing(dataReader *bufio.Reader, headerMap *map[string]string) {
-	val, ok := (*headerMap)["Content-Length"]
-	val = strings.TrimPrefix(val, " ")
-	if ok {
-		fmt.Println("The length of the content is:", val)
-		contentLength, err := strconv.Atoi(val)
-		if err != nil {
-			log.Fatal("Invalid content length", err)
-		}
-		data := make([]byte, contentLength)
-		// msgBody, err := dataReader.Peek(contentLength)
-		// fmt.Println("The alleged message body:", string(msgBody))
-		numer, err := io.ReadFull(dataReader, []byte(data))
-		if err != nil {
-			fmt.Println(err, "IO READ FULL")
-		}
-		fmt.Println(numer)
-		if err != nil {
-			log.Fatal("God save me")
-		}
-
-		fmt.Println("The alleged message body data:", string(data))
 	}
 }
