@@ -30,7 +30,7 @@ func read(conn net.Conn) {
 	var isStartLineParsed bool
 	var headerMap *map[string]string
 	var headerDone bool
-	var messageParsed bool
+	// var messageParsed bool
 	header := make(map[string]string)
 	for {
 		data, err := dataReader.ReadString('\n')
@@ -51,32 +51,9 @@ func read(conn net.Conn) {
 		} else if !headerDone {
 			if data == "\r\n" {
 				headerDone = true
-
+				messageParsing(dataReader, headerMap)
 			} else {
 				headerMap = handleHeader(data, &header)
-			}
-			fmt.Println(isStartLineParsed, headerDone, messageParsed)
-		} else if !messageParsed {
-			fmt.Println("Hi")
-			val, ok := (*headerMap)["Content-Length"]
-			fmt.Println("Hi")
-			if ok {
-				fmt.Println("The length of the content is:", val)
-				contentLength, err := strconv.Atoi(val)
-				if err != nil {
-					log.Fatal("Invalid content length", err)
-				}
-				msgBody, err := dataReader.Peek(contentLength)
-				numer, err := io.ReadFull(conn, []byte(data))
-				if err != nil {
-					fmt.Println(err, "IO READ FULL")
-				}
-				fmt.Println(numer)
-				if err != nil {
-					log.Fatal("God save me")
-				}
-				fmt.Println("The alleged message body:", string(msgBody))
-				messageParsed = true
 			}
 		}
 	}
@@ -141,4 +118,29 @@ func handleHeader(data string, header *map[string]string) *map[string]string {
 		}
 	}
 	return header
+}
+
+func messageParsing(dataReader *bufio.Reader, headerMap *map[string]string) {
+	val, ok := (*headerMap)["Content-Length"]
+	val = strings.TrimPrefix(val, " ")
+	if ok {
+		fmt.Println("The length of the content is:", val)
+		contentLength, err := strconv.Atoi(val)
+		if err != nil {
+			log.Fatal("Invalid content length", err)
+		}
+		data := make([]byte, contentLength)
+		// msgBody, err := dataReader.Peek(contentLength)
+		// fmt.Println("The alleged message body:", string(msgBody))
+		numer, err := io.ReadFull(dataReader, []byte(data))
+		if err != nil {
+			fmt.Println(err, "IO READ FULL")
+		}
+		fmt.Println(numer)
+		if err != nil {
+			log.Fatal("God save me")
+		}
+
+		fmt.Println("The alleged message body data:", string(data))
+	}
 }
