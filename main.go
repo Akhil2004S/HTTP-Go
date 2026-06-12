@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"httProtocol/parser"
 	"httProtocol/router"
+	"httProtocol/types"
 	"log"
 	"net"
 )
@@ -14,6 +15,8 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	router.RegisterRoute("GET", "/home", handleHome)
 
 	for {
 		conn, err := listener.Accept()
@@ -30,6 +33,8 @@ func read(conn net.Conn) {
 	var isStartLineParsed bool
 	var headerMap parser.HeaderData
 	var headerDone bool
+	var messageBody string
+	// var requestRouted bool
 
 	header := make(map[string]string)
 	for {
@@ -40,25 +45,31 @@ func read(conn net.Conn) {
 			conn.Close()
 			return
 		}
+
 		if !isStartLineParsed {
 			isStartLineParsed = true
 			startLineData, err = parser.ParseStartLine(data)
 			if err != nil {
 				fmt.Println(err)
+				conn.Close()
 				return
 			}
-			fmt.Println("The start line data in struct is:", startLineData)
 		} else if !headerDone {
 			if data == "\r\n" {
 				headerDone = true
-				messageBody := parser.ParseBody(dataReader, headerMap)
-				fmt.Println("Getting the Start line data:", startLineData)
-				fmt.Println("Getting the header:", headerMap)
-				fmt.Println("The message body is:", messageBody)
-				router.Route(startLineData, headerMap, messageBody)
+				messageBody = parser.ParseBody(dataReader, headerMap)
+				router.Route(conn, startLineData, &headerMap, messageBody)
 			} else {
 				headerMap = parser.ParseHeader(data, &header)
 			}
 		}
 	}
+}
+
+func handleHome() types.Response {
+	response := types.Response{
+		StatusCode: 200,
+		Message:    "You've called home",
+	}
+	return response
 }

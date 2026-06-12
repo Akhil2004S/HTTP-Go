@@ -13,19 +13,7 @@ import (
 // bool is whether the line is parsed. String is the response and int is the status code
 func ParseStartLine(data string) (*StartLine, error) {
 	startLine := &StartLine{}
-	// allowedMethods := map[string]bool{
-	// 	"GET":    true,
-	// 	"POST":   true,
-	// 	"PUT":    true,
-	// 	"PATCH":  true,
-	// 	"DELETE": true,
-	// }
 
-	// allowedPaths := map[string]bool{
-	// 	"/home":     true,
-	// 	"/test":     true,
-	// 	"/willWork": true,
-	// }
 	var parsedString []string
 	// var responseString string
 	var method string
