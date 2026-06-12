@@ -11,8 +11,8 @@ import (
 )
 
 // bool is whether the line is parsed. String is the response and int is the status code
-func ParseStartLine(data string) (*StartLine, error) {
-	startLine := &StartLine{}
+func ParseStartLine(data string) (StartLine, error) {
+	startLine := StartLine{}
 
 	var parsedString []string
 	// var responseString string

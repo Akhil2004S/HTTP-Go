@@ -18,13 +18,12 @@ var allowedMethods = map[string]bool{
 
 var allowedRoutes = make(types.AllowedPaths)
 
-func Route(conn net.Conn, startLineData *parser.StartLine, headerData *parser.HeaderData, body string) bool {
+func Route(conn net.Conn, requestLine parser.StartLine, headerData parser.HeaderData, body string) bool {
 	fmt.Println("In router")
-	request := types.Request{Method: startLineData.Method, Route: startLineData.Path}
-	_, validMethod := allowedMethods[startLineData.Method]
-	_, validPath := allowedRoutes[request]
+	_, validMethod := allowedMethods[requestLine.Method]
+	_, validPath := allowedRoutes[requestLine]
 
-	if startLineData.Version != "HTTP/1.1" {
+	if requestLine.Version != "HTTP/1.1" {
 		// err := errors.New("Invalid path. Version ain't available")
 		errCode := 501
 		handler.HandleError(conn, errCode)
@@ -32,7 +31,12 @@ func Route(conn net.Conn, startLineData *parser.StartLine, headerData *parser.He
 
 	if validMethod && validPath {
 		// Call the appropriate handler
-		handler.HandleRequest(conn, startLineData, headerData, body, allowedRoutes)
+		request := types.Request{
+			StartLine: requestLine,
+			Headers:   headerData,
+			Message:   body,
+		}
+		handler.HandleRequest(conn, request, allowedRoutes)
 		return true
 	} else if !validMethod {
 		// Handle error where the handler is sent the error and the error code
@@ -49,10 +53,11 @@ func Route(conn net.Conn, startLineData *parser.StartLine, headerData *parser.He
 	return true
 }
 
-func RegisterRoute(method string, route string, routerFunction func() types.Response) {
-	request := types.Request{
-		Method: method,
-		Route:  route,
+func RegisterRoute(method string, route string, routerFunction func(types.Request) types.Response) {
+	request := parser.StartLine{
+		Method:  method,
+		Path:    route,
+		Version: "HTTP/1.1",
 	}
 	allowedRoutes[request] = routerFunction
 }

@@ -1,8 +1,11 @@
 package types
 
+import "httProtocol/parser"
+
 type Request struct {
-	Method string
-	Route  string
+	StartLine parser.StartLine
+	Headers   parser.HeaderData
+	Message   string
 }
 
 type Response struct {
@@ -10,4 +13,4 @@ type Response struct {
 	Message    string
 }
 
-type AllowedPaths map[Request]func() Response
+type AllowedPaths map[parser.StartLine]func(Request) Response

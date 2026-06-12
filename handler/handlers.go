@@ -26,21 +26,10 @@ func HandleError(conn net.Conn, errCode int) {
 	}
 }
 
-func HandleRequest(conn net.Conn, startLineData *parser.StartLine, header *parser.HeaderData, body string, routes types.AllowedPaths) {
-	fmt.Println("In handle request. Method:", startLineData.Method)
-	request := types.Request{Method: startLineData.Method, Route: startLineData.Path}
-	response := routes[request]()
+func HandleRequest(conn net.Conn, requestData types.Request, routes types.AllowedPaths) {
+	fmt.Println("In handle request. Method:", requestData.StartLine.Method)
+	request := parser.StartLine{Method: requestData.StartLine.Method, Path: requestData.StartLine.Path, Version: requestData.StartLine.Version}
+	response := routes[request](requestData)
 	fmt.Println(response)
 	network.WriteToConn(conn, response)
 }
-
-// func handleGet(path string) (string, error) {
-// 	var response string
-// 	switch path {
-// 	case "/home":
-// 		body := "body is home"
-
-// 		response = fmt.Sprintf("HTTP/1.1 200 OK\r\nContent-Length:%d\r\nContent-Type:text/plain\r\n\r\n%s\r\n", len(body), body)
-// 	}
-// 	return response, nil
-// }

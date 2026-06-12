@@ -17,6 +17,7 @@ func main() {
 	}
 
 	router.RegisterRoute("GET", "/home", handleHome)
+	router.RegisterRoute("POST", "/homer", handleHomePOST)
 
 	for {
 		conn, err := listener.Accept()
@@ -29,7 +30,7 @@ func main() {
 
 func read(conn net.Conn) {
 	dataReader := bufio.NewReader(conn)
-	var startLineData *parser.StartLine
+	var startLineData parser.StartLine
 	var isStartLineParsed bool
 	var headerMap parser.HeaderData
 	var headerDone bool
@@ -58,7 +59,7 @@ func read(conn net.Conn) {
 			if data == "\r\n" {
 				headerDone = true
 				messageBody = parser.ParseBody(dataReader, headerMap)
-				router.Route(conn, startLineData, &headerMap, messageBody)
+				router.Route(conn, startLineData, headerMap, messageBody)
 			} else {
 				headerMap = parser.ParseHeader(data, &header)
 			}
@@ -66,10 +67,21 @@ func read(conn net.Conn) {
 	}
 }
 
-func handleHome() types.Response {
+func handleHome(request types.Request) types.Response {
 	response := types.Response{
 		StatusCode: 200,
 		Message:    "You've called home",
+	}
+	return response
+}
+
+func handleHomePOST(request types.Request) types.Response {
+	fmt.Println("Post can do something with the obtained request data")
+	fmt.Println(request.Headers)
+	fmt.Println(request.Message)
+	response := types.Response{
+		StatusCode: 200,
+		Message:    "Did something",
 	}
 	return response
 }
